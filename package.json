@@ -24,7 +24,8 @@
     "migration:generate": "npm run build && npm run typeorm -- migration:generate -d dist/typeorm-cli.config.js",
     "migration:run": "npm run build && npm run typeorm -- migration:run -d dist/typeorm-cli.config.js",
     "migration:revert": "npm run build && npm run typeorm -- migration:revert -d dist/typeorm-cli.config.js",
-    "db:psql": "docker exec -it payments-api-db-1 psql -U banex -d payments"
+    "db:psql": "docker exec -it payments-api-db-1 psql -U banex -d payments",
+    "seed": "ts-node src/seeds/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
