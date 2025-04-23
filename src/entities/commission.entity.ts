@@ -1,5 +1,6 @@
 // src/entities/commission.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+
 import { Account } from './account.entity';
 import { Transaction } from './transaction.entity';
 

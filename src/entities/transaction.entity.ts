@@ -1,5 +1,6 @@
 // src/entities/transaction.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+
 import { Account } from './account.entity';
 
 @Entity()

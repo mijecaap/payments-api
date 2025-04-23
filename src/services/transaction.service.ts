@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+
 import { Account } from '../entities/account.entity';
-import { Transaction } from '../entities/transaction.entity';
 import { Commission } from '../entities/commission.entity';
+import { Transaction } from '../entities/transaction.entity';
 
 @Injectable()
 export class TransactionService {
@@ -88,19 +89,17 @@ export class TransactionService {
 
       // Confirmamos la transacción
       await queryRunner.commitTransaction();
-      
-      return transaction;
 
+      return transaction;
     } catch (error) {
       // Revertimos la transacción en caso de error
       await queryRunner.rollbackTransaction();
-      
+
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      
-      throw new BadRequestException('Error al procesar la transacción');
 
+      throw new BadRequestException('Error al procesar la transacción');
     } finally {
       // Liberamos el queryRunner
       await queryRunner.release();

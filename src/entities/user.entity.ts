@@ -1,5 +1,6 @@
 // src/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+
 import { Account } from './account.entity';
 
 @Entity()

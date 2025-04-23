@@ -1,8 +1,9 @@
 // src/entities/account.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
-import { User } from './user.entity';
-import { Transaction } from './transaction.entity';
+
 import { Commission } from './commission.entity';
+import { Transaction } from './transaction.entity';
+import { User } from './user.entity';
 
 @Entity()
 export class Account {
