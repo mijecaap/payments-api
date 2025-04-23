@@ -1,99 +1,174 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# payments‑api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de pagos con sistema de referidos (NestJS 10 + TypeORM 0.3 + PostgreSQL).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📑 Índice
+1. [Stack](#stack)
+2. [Requisitos](#requisitos)
+3. [Instalación local](#instalación-local)
+4. [Variables de entorno](#variables-de-entorno)
+5. [Scripts npm](#scripts-npm)
+6. [Migraciones y seed](#migraciones-y-seed)
+7. [Docker Compose](#docker-compose)
+8. [CI / CD](#ci--cd)
+9. [Despliegue en Railway](#despliegue-en-railway)
+10. [Pruebas de carga](#pruebas-de-carga)
+11. [Concurrencia y condiciones de carrera](#concurrencia-y-condiciones-de-carrera)
+12. [Convenciones](#convenciones)
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Stack
+- **Node.js** 18 / 20 LTS  
+- **NestJS** 10  
+- **TypeORM** 0.3  
+- **PostgreSQL** 15  
+- **Jest** para tests  
+- **k6** para stress tests
 
-## Project setup
+## Requisitos
+- Windows 10+ con `cmd`  
+- Git, Docker Desktop (WSL 2)  
+- Node LTS y npm  
+- Cuenta en GitHub y Railway
 
-```bash
-$ npm install
+## Instalación local
+
+```cmd
+git clone https://github.com/mijecaap/payments-api
+cd payments-api
+npm install
+docker compose up -d       :: levanta PostgreSQL
+npm run start:dev          :: Nest en modo watch
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+### Primer acceso a la BD
+```cmd
+npm run migration:run
+npm run seed
 ```
 
-## Run tests
+## Variables de entorno
 
-```bash
-# unit tests
-$ npm run test
+Crea un archivo **.env** en la raíz:
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=banex
+DB_PASSWORD=banexpwd
+DB_NAME=payments
+NODE_ENV=development
 ```
 
-## Deployment
+## Scripts npm
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+| Script | Descripción |
+| ------ | ----------- |
+| `start` | Compila y ejecuta en producción |
+| `start:dev` | Hot‑reload con `ts-node-dev` |
+| `lint` | ESLint + Prettier |
+| `test` | Unit tests con cobertura |
+| `migration:run` | Ejecuta migraciones TypeORM |
+| `migration:generate` | Genera nueva migración |
+| `seed` | Inserta datos de prueba |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Migraciones y seed
+Las entidades viven en `src/entities`. Cada cambio de esquema requiere:
 
-```bash
-$ npm install -g mau
-$ mau deploy
+```cmd
+npm run migration:generate -- -n <nombre>
+npm run migration:run
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+El seed crea usuarios, cuentas y relaciones de referidos básicas.
 
-## Resources
+## Docker Compose
+Archivo `docker-compose.yml` incluido:
 
-Check out a few resources that may come in handy when working with NestJS:
+```yaml
+services:
+  db:
+    image: postgres:15
+    ports: ["5432:5432"]
+    environment:
+      POSTGRES_USER: banex
+      POSTGRES_PASSWORD: banexpwd
+      POSTGRES_DB: payments
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## CI / CD
+- **GitHub Actions**: workflow `ci.yml`  
+  1. Checkout  
+  2. Matrix Node 18|20  
+  3. `npm ci`, `npm run lint`, `npm test`  
+- Status badge en el README.
 
-## Support
+## Despliegue en Railway
+1. Crea proyecto, añade plugin **PostgreSQL**.  
+2. Conecta repo y habilita **Deploy on push**.  
+3. Variables ⇒ mismas que `.env`.  
+4. Post‑deploy:  
+   ```bash
+   npm run migration:run
+   ```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Pruebas de carga
+Scripts `stress/payments.js` con k6:
 
-## Stay in touch
+```bash
+k6 run stress/payments.js
+```
+Configura 200 VU y escenarios de transferencias simultáneas.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## Concurrencia y condiciones de carrera
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### ¿Qué son las condiciones de carrera y cómo afectan al sistema?
+
+En un sistema de pagos como el que estamos desarrollando, **las condiciones de carrera** ocurren cuando dos o más procesos intentan acceder y modificar los mismos datos (en este caso, **saldo de cuentas y comisiones**) al mismo tiempo sin control adecuado. Esto puede causar **errores**, como **saldo incorrecto**, **comisiones mal calculadas** o **transacciones fallidas**.
+
+Por ejemplo, en un escenario donde una persona realiza una transferencia mientras otra persona recibe un pago o realiza una transacción desde la misma cuenta, el sistema debe asegurarse de que los saldos y las comisiones se calculen correctamente, incluso si ambas operaciones ocurren al mismo tiempo.
+
+### Estrategias implementadas para manejar la concurrencia
+
+Para evitar estos problemas, hemos implementado varias estrategias:
+
+#### 1. **Bloqueo de registros (Row-level locking)**
+Antes de realizar cualquier cambio en el saldo de una cuenta (por ejemplo, una transferencia), el sistema bloquea temporalmente ese registro para que ninguna otra operación pueda modificarlo hasta que la transacción se haya completado.
+
+- **Ejemplo**: Si Persona A está haciendo una transferencia de $50, el sistema bloquea la cuenta hasta que la operación termine. Si otra persona intenta realizar una transacción en la misma cuenta al mismo tiempo, se bloquea hasta que la primera transacción termine.
+
+#### 2. **Nivel de aislamiento `SERIALIZABLE`**
+El nivel de aislamiento **`SERIALIZABLE`** asegura que las transacciones se ejecuten de forma secuencial y no simultánea. Este nivel garantiza que, aunque haya múltiples transacciones, ninguna interferirá con la otra.
+
+- **Ejemplo**: Si dos personas o procesos intentan modificar el saldo de una cuenta al mismo tiempo, el sistema se asegura de que solo una transacción se ejecute a la vez, evitando que se realicen actualizaciones incorrectas.
+
+#### 3. **Transacciones atómicas**
+Las **transacciones atómicas** aseguran que todas las operaciones dentro de una transacción se realicen de manera exitosa o, si hay un error, **ninguna** operación se aplique. Esto evita que el sistema quede en un estado inconsistente si algo sale mal durante una transacción.
+
+- **Ejemplo**: Si el sistema necesita restar dinero de una cuenta y agregarlo a otra, si algo falla durante este proceso (por ejemplo, no hay suficiente saldo), la transacción completa se deshace, asegurando que no haya dinero perdido ni en una cuenta ni en la otra.
+
+#### 4. **Retry exponencial y manejo de errores**
+Si el sistema detecta un **conflicto de concurrencia** (por ejemplo, dos transacciones simultáneas intentan modificar la misma cuenta), implementamos un **mecanismo de reintentos** con un **retraso exponencial** para intentar completar la transacción varias veces antes de finalmente fallar.
+
+- **Ejemplo**: Si dos transacciones intentan acceder a la misma cuenta y ambas fallan, el sistema intentará completar la transacción de nuevo después de un breve periodo de tiempo, asegurando que se completen correctamente.
+
+### ¿Qué más podemos hacer?
+
+En el futuro, podríamos mejorar aún más el manejo de concurrencia utilizando técnicas como:
+- **Monitoreo proactivo** para detectar y solucionar rápidamente cualquier problema de concurrencia que pueda surgir en el sistema.
+
+---
+
+## Convenciones
+- _Commit lint_ con Conventional Commits.  
+- Husky pre‑commit: `npm run lint && npm test`.  
+- Branches: `feat/*`, `fix/*`, `chore/*`.
+
+---
