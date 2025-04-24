@@ -9,6 +9,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
+  app.setGlobalPrefix('api'); // Agregar prefijo global
 
   const config = new DocumentBuilder()
     .setTitle('API de Pagos')
@@ -25,7 +26,7 @@ async function bootstrap() {
     },
   };
 
-  SwaggerModule.setup('api', app, document, customOptions);
+  SwaggerModule.setup('api-docs', app, document, customOptions);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,7 +36,7 @@ async function bootstrap() {
   );
 
   app.getHttpAdapter().get('/', (req: Request, res: Response) => {
-    res.redirect('/api');
+    res.redirect('/api-docs');
   });
 
   await app.listen(process.env.PORT ?? 4000);
