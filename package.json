@@ -25,7 +25,8 @@
     "migration:run": "npm run build && npm run typeorm -- migration:run -d dist/typeorm-cli.config.js",
     "migration:revert": "npm run build && npm run typeorm -- migration:revert -d dist/typeorm-cli.config.js",
     "db:psql": "docker exec -it payments-api-db-1 psql -U banex -d payments",
-    "seed": "ts-node src/seeds/seed.ts"
+    "seed": "ts-node src/seeds/seed.ts",
+    "k6:test": "docker run --add-host=host.docker.internal:host-gateway -v %cd%/stress-tests:/stress-tests -i grafana/k6 run /stress-tests/payments.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
