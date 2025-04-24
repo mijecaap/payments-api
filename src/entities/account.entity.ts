@@ -10,7 +10,10 @@ export class Account {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true, length: 10 })
+  accountNumber: string;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
   balance: number;
 
   @Column()
