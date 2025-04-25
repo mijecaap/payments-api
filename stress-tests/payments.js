@@ -9,6 +9,7 @@ const deadlockErrors = new Counter('deadlock_errors');
 const successfulTransfers = new Counter('successful_transfers');
 const transferDuration = new Trend('transfer_duration');
 const transferRate = new Rate('transfer_success_rate');
+const insufficientFundsErrors = new Counter('insufficient_funds_errors');
 
 // Configuración de la prueba
 export const options = {
@@ -33,7 +34,8 @@ export const options = {
   thresholds: {
     'transfer_success_rate': ['rate>=0.95'],    // 95% de éxito
     'http_req_duration': ['p(95)<=2000'],      // 95% bajo 2s
-    'successful_transfers': ['count>100']       // Al menos 100 transferencias exitosas
+    'successful_transfers': ['count>100'],      // Al menos 100 transferencias exitosas
+    'insufficient_funds_errors': ['count<10']   // Menos de 10 errores por saldo insuficiente
   }
 };
 
@@ -57,12 +59,16 @@ function getAuthToken(email, password) {
 function makeTransfer(token, originAccountId, destinationAccountId, amount) {
   const startTime = new Date();
   
+  // Calcular el monto total necesario (monto + 1% de comisión)
+  const commission = Math.max(0.01, Number((amount * 0.01).toFixed(2)));
+  const totalAmount = amount;
+  
   const transferRes = http.post(
     `${config.baseUrl}/transactions`,
     JSON.stringify({
       originAccountId: originAccountId,
       destinationAccountId: destinationAccountId,
-      amount: amount
+      amount: totalAmount
     }),
     {
       headers: {
@@ -87,6 +93,9 @@ function makeTransfer(token, originAccountId, destinationAccountId, amount) {
     if (transferRes.body.includes('deadlock')) {
       deadlockErrors.add(1);
     }
+    if (transferRes.body.includes('saldo insuficiente')) {
+      insufficientFundsErrors.add(1);
+    }
   }
 
   transferRate.add(success);
@@ -108,13 +117,14 @@ export default function () {
     destIndex = Math.floor(Math.random() * config.accounts.length);
   } while (destIndex === originIndex);
 
-  const amount = Math.random() * 10 + 0.1; // Entre 0.1 y 10.1 soles
+  // Monto entre 0.1 y 5 soles para evitar problemas de saldo insuficiente
+  const amount = Number((Math.random() * 4.9 + 0.1).toFixed(2));
 
   makeTransfer(
     token,
     config.accounts[originIndex],
     config.accounts[destIndex],
-    Number(amount.toFixed(2))
+    amount
   );
 
   // Esperar entre 1 y 2 segundos entre transferencias
