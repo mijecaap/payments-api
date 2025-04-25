@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 
+import { PaginatedTransactionHistoryDto, TransactionResponseDto } from '../dto/transaction.dto';
 import { Account } from '../entities/account.entity';
 import { Commission } from '../entities/commission.entity';
 import { Transaction } from '../entities/transaction.entity';
@@ -35,15 +36,12 @@ export class TransactionService {
 
   async createTransaction(
     originId: number,
-    destId: number,
+    destinationAccountNumber: string,
     amount: number,
     userId: number,
-  ): Promise<Transaction> {
+  ): Promise<TransactionResponseDto> {
     if (amount < 0.1) {
       throw new BadRequestException('El monto mínimo de transferencia es S/ 0.10');
-    }
-    if (originId === destId) {
-      throw new BadRequestException('No se puede transferir a la misma cuenta');
     }
 
     // Verificar propiedad de la cuenta origen
@@ -58,63 +56,94 @@ export class TransactionService {
       );
     }
 
+    // Verificar que la cuenta destino existe
+    const destinationAccount = await this.accountRepository.findOne({
+      where: { accountNumber: destinationAccountNumber },
+    });
+
+    if (!destinationAccount) {
+      throw new NotFoundException('Cuenta de destino no encontrada');
+    }
+
+    // Verificar que no sea la misma cuenta
+    if (originAccount.accountNumber === destinationAccountNumber) {
+      throw new BadRequestException('No se puede transferir a la misma cuenta');
+    }
+
     // Iniciamos una transacción usando QueryRunner
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Bloqueamos las cuentas involucradas usando pg_advisory_xact_lock
+      // Bloqueamos las cuentas involucradas
       await queryRunner.query('SELECT pg_advisory_xact_lock($1)', [originId]);
-      await queryRunner.query('SELECT pg_advisory_xact_lock($1)', [destId]);
+      await queryRunner.query('SELECT pg_advisory_xact_lock($1)', [destinationAccount.id]);
 
-      // Obtenemos las cuentas con FOR UPDATE para bloqueo a nivel de fila
-      const originAccountLocked = await queryRunner.manager.findOne(Account, {
-        where: { id: originId },
-        lock: { mode: 'pessimistic_write' },
-      });
-      const destinationAccount = await queryRunner.manager.findOne(Account, {
-        where: { id: destId },
-        lock: { mode: 'pessimistic_write' },
-      });
+      // Primero obtenemos las cuentas con bloqueo
+      const [originAccountLocked, destinationAccountLocked] = await Promise.all([
+        queryRunner.manager
+          .createQueryBuilder(Account, 'account')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('account.user', 'user')
+          .where('account.id = :id', { id: originId })
+          .getOne(),
+        queryRunner.manager
+          .createQueryBuilder(Account, 'account')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('account.user', 'user')
+          .where('account.id = :id', { id: destinationAccount.id })
+          .getOne(),
+      ]);
 
-      if (!destinationAccount) {
-        throw new NotFoundException('Cuenta de destino no encontrada');
-      }
+      // Calculamos la comisión total (1% con mínimo de S/ 0.01)
+      let totalCommission = Number((amount * 0.01).toFixed(2));
+      totalCommission = Math.max(0.01, totalCommission);
 
-      if (originAccountLocked.balance < amount) {
-        throw new BadRequestException('Saldo insuficiente');
+      // Verificar saldo incluyendo la comisión
+      if (originAccountLocked.balance < amount + totalCommission) {
+        throw new BadRequestException('Saldo insuficiente (incluye comisión del 1%)');
       }
 
       // Aseguramos que todos los valores sean números
       const currentBalance = Number(originAccountLocked.balance);
-      const destBalance = Number(destinationAccount.balance);
-      amount = Number(amount);
-
-      // Calculamos la comisión total (1% con mínimo de S/ 0.01)
-      let totalCommission = Number((amount * 0.01).toFixed(2));
-      totalCommission = Math.max(0.01, totalCommission); // Establecemos el mínimo en S/ 0.01
-      const transferAmount = Number((amount - totalCommission).toFixed(2));
+      const destBalance = Number(destinationAccountLocked.balance);
 
       // Dividimos la comisión en dos partes iguales
       const halfCommission = Number((totalCommission / 2).toFixed(2));
-      const remainingCommission = Number((totalCommission - halfCommission).toFixed(2)); // Por si hay un centavo extra por redondeo
+      const remainingCommission = Number((totalCommission - halfCommission).toFixed(2));
 
-      // Actualizamos el saldo de la cuenta origen
-      originAccountLocked.balance = Number((currentBalance - amount).toFixed(2));
+      // Actualizamos el saldo de la cuenta origen (monto + comisión)
+      originAccountLocked.balance = Number((currentBalance - amount - totalCommission).toFixed(2));
       await queryRunner.manager.save(originAccountLocked);
 
-      // Actualizamos el saldo de la cuenta destino
-      destinationAccount.balance = Number((destBalance + transferAmount).toFixed(2));
-      await queryRunner.manager.save(destinationAccount);
+      // Actualizamos el saldo de la cuenta destino (recibe el monto completo)
+      destinationAccountLocked.balance = Number((destBalance + amount).toFixed(2));
+      await queryRunner.manager.save(destinationAccountLocked);
 
       // Obtenemos la cuenta del sistema
       const systemAccount = await this.getSystemAccount(queryRunner);
       const systemBalance = Number(systemAccount.balance);
-      systemAccount.balance = Number((systemBalance + remainingCommission).toFixed(2));
-      await queryRunner.manager.save(systemAccount);
 
-      // Si la cuenta origen tiene referido, le damos su parte de la comisión
+      // Creamos la transacción principal (sin incluir las comisiones)
+      const transaction = new Transaction();
+      transaction.amount = amount;
+      transaction.commission = totalCommission;
+      transaction.date = new Date();
+      transaction.originAccount = originAccountLocked;
+      transaction.destinationAccount = destinationAccountLocked;
+      await queryRunner.manager.save(transaction);
+
+      // Preparar la respuesta que devolveremos
+      const response: TransactionResponseDto = {
+        amount: transaction.amount,
+        commission: transaction.commission,
+        date: transaction.date,
+        destinationName: destinationAccountLocked.user.name,
+        destinationAccountNumber: destinationAccountLocked.accountNumber,
+      };
+
+      // Si la cuenta origen tiene referido, distribuimos la comisión
       if (originAccountLocked.referred_by > 0) {
         const referrerAccount = await queryRunner.manager.findOne(Account, {
           where: { id: originAccountLocked.referred_by },
@@ -122,43 +151,12 @@ export class TransactionService {
         });
 
         if (referrerAccount) {
+          // Actualizar saldo del referidor
           const referrerBalance = Number(referrerAccount.balance);
           referrerAccount.balance = Number((referrerBalance + halfCommission).toFixed(2));
           await queryRunner.manager.save(referrerAccount);
-        }
-      } else {
-        // Si no hay referido, todo va a la cuenta del sistema
-        systemAccount.balance = Number((systemBalance + halfCommission).toFixed(2));
-        await queryRunner.manager.save(systemAccount);
-      }
 
-      // Creamos la transacción
-      const transaction = new Transaction();
-      transaction.amount = amount;
-      transaction.commission = totalCommission;
-      transaction.date = new Date();
-      transaction.originAccount = originAccountLocked;
-      transaction.destinationAccount = destinationAccount;
-      await queryRunner.manager.save(transaction);
-
-      // Creamos el registro de comisión para el sistema
-      const systemCommission = new Commission();
-      systemCommission.amount =
-        originAccountLocked.referred_by === 0
-          ? Number(totalCommission.toFixed(2))
-          : Number(remainingCommission.toFixed(2));
-      systemCommission.date = new Date();
-      systemCommission.account = systemAccount;
-      systemCommission.transaction = transaction;
-      await queryRunner.manager.save(systemCommission);
-
-      // Si hay cuenta referidora, creamos su registro de comisión
-      if (originAccountLocked.referred_by > 0) {
-        const referrerAccount = await queryRunner.manager.findOne(Account, {
-          where: { id: originAccountLocked.referred_by },
-        });
-
-        if (referrerAccount) {
+          // Registrar comisión del referidor
           const referrerCommission = new Commission();
           referrerCommission.amount = halfCommission;
           referrerCommission.date = new Date();
@@ -166,14 +164,37 @@ export class TransactionService {
           referrerCommission.transaction = transaction;
           await queryRunner.manager.save(referrerCommission);
         }
+
+        // La otra mitad va al sistema
+        systemAccount.balance = Number((systemBalance + remainingCommission).toFixed(2));
+        await queryRunner.manager.save(systemAccount);
+
+        // Registrar comisión del sistema
+        const systemCommission = new Commission();
+        systemCommission.amount = remainingCommission;
+        systemCommission.date = new Date();
+        systemCommission.account = systemAccount;
+        systemCommission.transaction = transaction;
+        await queryRunner.manager.save(systemCommission);
+      } else {
+        // Si no hay referido, toda la comisión va al sistema
+        systemAccount.balance = Number((systemBalance + totalCommission).toFixed(2));
+        await queryRunner.manager.save(systemAccount);
+
+        // Registrar comisión completa para el sistema
+        const systemCommission = new Commission();
+        systemCommission.amount = totalCommission;
+        systemCommission.date = new Date();
+        systemCommission.account = systemAccount;
+        systemCommission.transaction = transaction;
+        await queryRunner.manager.save(systemCommission);
       }
 
-      // Confirmamos la transacción
+      // Confirmar la transacción
       await queryRunner.commitTransaction();
 
-      return transaction;
+      return response;
     } catch (error) {
-      // Revertimos la transacción en caso de error
       await queryRunner.rollbackTransaction();
 
       if (
@@ -187,7 +208,6 @@ export class TransactionService {
       console.error('Error en la transacción:', error);
       throw new BadRequestException('Error al procesar la transacción');
     } finally {
-      // Liberamos el queryRunner
       await queryRunner.release();
     }
   }
@@ -201,5 +221,54 @@ export class TransactionService {
 
     const accountIds = accounts.map((account) => account.id);
     return this.transactionRepository.findTransactionsByUserAccounts(accountIds);
+  }
+
+  async getTransactionHistoryPaginated(
+    accountId: number,
+    userId: number,
+    page: number = 1,
+  ): Promise<PaginatedTransactionHistoryDto> {
+    // Verificar propiedad de la cuenta
+    const account = await this.accountRepository.findOne({
+      where: { id: accountId, user: { id: userId } },
+    });
+
+    if (!account) {
+      throw new UnauthorizedException('No tienes permiso para acceder a esta cuenta');
+    }
+
+    const result = await this.transactionRepository.findPaginatedTransactionHistory(
+      accountId,
+      page,
+    );
+
+    // Transformar las transacciones al formato requerido, excluyendo transacciones con la cuenta del sistema
+    const transformedTransactions = result.transactions
+      .filter((transaction) => {
+        const systemAccount =
+          transaction.originAccount.accountNumber === '0000000001' ||
+          transaction.destinationAccount.accountNumber === '0000000001';
+        return !systemAccount;
+      })
+      .map((transaction) => {
+        const isOutgoing = transaction.originAccount.id === accountId;
+        const contact = isOutgoing
+          ? transaction.destinationAccount.user
+          : transaction.originAccount.user;
+
+        return {
+          amount: isOutgoing ? -transaction.amount : transaction.amount,
+          commission: transaction.commission,
+          date: transaction.date,
+          contactName: contact.name,
+        };
+      });
+
+    return {
+      transactions: transformedTransactions,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+    };
   }
 }

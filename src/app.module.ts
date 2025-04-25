@@ -8,6 +8,7 @@ import { AccountController } from './controllers/account.controller';
 import { CommissionController } from './controllers/commission.controller';
 import { ContactController } from './controllers/contact.controller';
 import { TransactionController } from './controllers/transaction.controller';
+import { UserController } from './controllers/user.controller';
 import { Account } from './entities/account.entity';
 import { Commission } from './entities/commission.entity';
 import { Transaction } from './entities/transaction.entity';
@@ -19,6 +20,7 @@ import { AccountService } from './services/account.service';
 import { CommissionService } from './services/commission.service';
 import { ContactService } from './services/contact.service';
 import { TransactionService } from './services/transaction.service';
+import { UserService } from './services/user.service';
 
 @Module({
   imports: [
@@ -37,12 +39,19 @@ import { TransactionService } from './services/transaction.service';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     AuthModule,
   ],
-  controllers: [TransactionController, ContactController, AccountController, CommissionController],
+  controllers: [
+    TransactionController,
+    ContactController,
+    AccountController,
+    CommissionController,
+    UserController,
+  ],
   providers: [
     TransactionService,
     ContactService,
     AccountService,
     CommissionService,
+    UserService,
     AccountRepository,
     TransactionRepository,
     CommissionRepository,
