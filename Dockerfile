@@ -25,6 +25,3 @@ COPY package*.json ./
 
 # Exponer el puerto
 EXPOSE 4000
-
-# Comando para ejecutar el seed y luego la aplicación
-CMD npm run typeorm:run-migrations && npm run seed && npm run start:prod
