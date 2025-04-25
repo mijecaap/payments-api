@@ -4,20 +4,27 @@ API de pagos con sistema de referidos (NestJS 10 + TypeORM 0.3 + PostgreSQL).
 
 ## 📑 Índice
 1. [Stack](#stack)
-2. [Requisitos](#requisitos)
-3. [Instalación local](#instalación-local)
-4. [Variables de entorno](#variables-de-entorno)
-5. [Scripts npm](#scripts-npm)
-6. [Migraciones y seed](#migraciones-y-seed)
-7. [Docker Compose](#docker-compose)
-8. [CI / CD](#ci--cd)
-9. [Despliegue en Railway](#despliegue-en-railway)
-10. [Pruebas de carga](#pruebas-de-carga)
-11. [Concurrencia y condiciones de carrera](#concurrencia-y-condiciones-de-carrera)
-12. [Características principales](#características-principales)
-13. [Documentación API](#documentación-api)
-14. [Seguridad](#seguridad)
-15. [Convenciones](#convenciones)
+2. [Diagrama de Base de Datos](#diagrama-de-base-de-datos)
+3. [Requisitos](#requisitos)
+4. [Instalación local](#instalación-local)
+5. [Variables de entorno](#variables-de-entorno)
+6. [Scripts npm](#scripts-npm)
+7. [Migraciones y seed](#migraciones-y-seed)
+8. [Docker Compose](#docker-compose)
+9. [CI / CD](#ci--cd)
+10. [Despliegue en Railway](#despliegue-en-railway)
+11. [Pruebas de carga](#pruebas-de-carga)
+12. [Concurrencia y condiciones de carrera](#concurrencia-y-condiciones-de-carrera)
+13. [Características principales](#características-principales)
+14. [Documentación API](#documentación-api)
+15. [Seguridad](#seguridad)
+16. [Convenciones](#convenciones)
+
+---
+
+## Diagrama de Base de Datos
+
+![Diagrama de Base de Datos](docs/database-diagram.png)
 
 ---
 
