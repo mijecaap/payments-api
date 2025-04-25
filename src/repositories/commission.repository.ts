@@ -13,27 +13,53 @@ export class CommissionRepository extends Repository<Commission> {
   }
 
   /**
-   * Encuentra todas las comisiones con sus relaciones
-   * @returns Lista de comisiones con información de cuenta y transacción
+   * Encuentra todas las comisiones paginadas para una cuenta específica
+   * @param accountId - ID de la cuenta
+   * @param page - Número de página
+   * @param limit - Límite de registros por página
+   * @returns Lista paginada de comisiones con sus relaciones
    * @throws {Error} Si hay un error en la consulta a la base de datos
    */
-  async findAllWithRelations(): Promise<Commission[]> {
+  async findPaginatedCommissions(
+    accountId: number,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    commissions: Commission[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     try {
-      return await this.find({
-        relations: ['account', 'transaction'],
-        order: { date: 'DESC' },
-      });
+      const skip = (page - 1) * limit;
+
+      const [commissions, total] = await this.createQueryBuilder('commission')
+        .leftJoinAndSelect('commission.account', 'account')
+        .leftJoinAndSelect('commission.transaction', 'transaction')
+        .leftJoinAndSelect('transaction.originAccount', 'originAccount')
+        .leftJoinAndSelect('originAccount.user', 'originUser')
+        .where('commission.accountId = :accountId', { accountId })
+        .orderBy('commission.date', 'DESC')
+        .skip(skip)
+        .take(limit)
+        .getManyAndCount();
+
+      return {
+        commissions,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
-      throw new InternalServerErrorException(`Error al buscar comisiones: ${message}`);
+      throw new InternalServerErrorException(
+        `Error al buscar comisiones paginadas para la cuenta ${accountId}: ${message}`,
+      );
     }
   }
 
   /**
    * Calcula el total de comisiones para una cuenta específica
-   * @param accountId - ID de la cuenta
-   * @returns Total de comisiones generadas por la cuenta
-   * @throws {Error} Si hay un error en la consulta a la base de datos
    */
   async getTotalCommissionsByAccount(accountId: number): Promise<number> {
     try {
