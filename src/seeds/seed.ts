@@ -93,22 +93,57 @@ async function seed() {
     account3.user = user4;
     await accountRepository.save(account3);
 
-    // Crear algunas transacciones de ejemplo
+    // Crear transacciones y comisiones de ejemplo
+
+    // 1. Transacción sin referido (toda la comisión va al sistema)
     const transaction1 = new Transaction();
     transaction1.amount = 100;
     transaction1.commission = 1; // 1% de comisión
     transaction1.date = new Date();
-    transaction1.originAccount = account1;
+    transaction1.originAccount = account3;
     transaction1.destinationAccount = account2;
     await transactionRepository.save(transaction1);
 
-    // Registrar la comisión de la transacción
-    const commission1 = new Commission();
-    commission1.amount = transaction1.commission;
-    commission1.date = transaction1.date;
-    commission1.account = account2;
-    commission1.transaction = transaction1;
-    await commissionRepository.save(commission1);
+    // Registrar comisión para el sistema
+    const systemCommission1 = new Commission();
+    systemCommission1.amount = transaction1.commission;
+    systemCommission1.date = transaction1.date;
+    systemCommission1.account = systemAccount;
+    systemCommission1.transaction = transaction1;
+    await commissionRepository.save(systemCommission1);
+
+    // 2. Transacción con referido (comisión dividida)
+    const transaction2 = new Transaction();
+    transaction2.amount = 200;
+    transaction2.commission = 2; // 1% de comisión
+    transaction2.date = new Date();
+    transaction2.originAccount = account2;
+    transaction2.destinationAccount = account3;
+    await transactionRepository.save(transaction2);
+
+    // Mitad de la comisión para el referidor
+    const referrerCommission = new Commission();
+    referrerCommission.amount = 1; // 50% de la comisión
+    referrerCommission.date = transaction2.date;
+    referrerCommission.account = account1; // Va a la cuenta que refirió
+    referrerCommission.transaction = transaction2;
+    await commissionRepository.save(referrerCommission);
+
+    // Mitad de la comisión para el sistema
+    const systemCommission2 = new Commission();
+    systemCommission2.amount = 1; // 50% de la comisión
+    systemCommission2.date = transaction2.date;
+    systemCommission2.account = systemAccount;
+    systemCommission2.transaction = transaction2;
+    await commissionRepository.save(systemCommission2);
+
+    // Actualizar saldos finales considerando transacciones y comisiones
+    account1.balance += 1; // Recibió comisión por referido
+    account2.balance = 500 - 202 + 100; // -202 (monto+comisión), +100 (recibido)
+    account3.balance = 750 - 101 + 200; // -101 (monto+comisión), +200 (recibido)
+    systemAccount.balance = 2; // Recibió 1 de comisión completa y 1 de comisión compartida
+
+    await accountRepository.save([account1, account2, account3, systemAccount]);
 
     console.log('✅ Datos de prueba insertados exitosamente');
   } catch (error) {
