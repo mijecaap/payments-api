@@ -12,7 +12,6 @@ export class AccountService {
   async getUserAccounts(userId: number): Promise<AccountResponseDto[]> {
     const accounts = await this.accountRepository.find({
       where: { user: { id: userId } },
-      relations: ['user'],
       select: {
         id: true,
         accountNumber: true,
@@ -25,7 +24,6 @@ export class AccountService {
     const accountsWithReferrers = await Promise.all(
       accounts.map(async (account) => {
         const accountData = {
-          ...account,
           id: account.id,
           accountNumber: account.accountNumber,
           balance: account.balance,

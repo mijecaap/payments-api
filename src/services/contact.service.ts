@@ -36,11 +36,14 @@ export class ContactService {
     const contactFrequency = new Map<number, ContactFrequency>();
 
     for (const transaction of transactions) {
+      // Solo procesamos transacciones donde las cuentas del usuario son el origen
       const isOrigin = accounts.some((a) => a.id === transaction.originAccount.id);
-      const contactAccount = isOrigin ? transaction.destinationAccount : transaction.originAccount;
-      const contactUser = isOrigin ? contactAccount.user : contactAccount.user;
+      if (!isOrigin) continue;
 
-      if (contactUser.id === userId) continue;
+      const contactAccount = transaction.destinationAccount;
+      const contactUser = contactAccount.user;
+
+      if (contactUser.id === userId || contactAccount.accountNumber === '0000000001') continue;
 
       if (!contactFrequency.has(contactUser.id)) {
         contactFrequency.set(contactUser.id, {
