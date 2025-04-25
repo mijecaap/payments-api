@@ -25,3 +25,5 @@ COPY package*.json ./
 
 # Exponer el puerto
 EXPOSE 4000
+
+CMD npm run start:prod
