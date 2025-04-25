@@ -1,5 +1,5 @@
 export const config = {
-  baseUrl: 'http://host.docker.internal:4000',
+  baseUrl: 'http://host.docker.internal:4000/api',
   // Credenciales de prueba
   users: [
     {
