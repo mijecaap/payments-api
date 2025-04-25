@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [20.x] # mismas versiones que usarás localmente
+        node: [18.x, 20.x] # mismas versiones que usarás localmente
     services: # levanta Postgres para tests de integración opcionales
       db:
         image: postgres:15
@@ -27,6 +27,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npm run lint
       - run: npm run test -- --coverage
