@@ -8,10 +8,10 @@ export class Transaction {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column('decimal', { precision: 10, scale: 2 })
   amount: number;
 
-  @Column()
+  @Column('decimal', { precision: 10, scale: 2 })
   commission: number;
 
   @Column()
