@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [18.x, 20.x] # mismas versiones que usarás localmente
+        node: [20.x] # mismas versiones que usarás localmente
     services: # levanta Postgres para tests de integración opcionales
       db:
         image: postgres:15
