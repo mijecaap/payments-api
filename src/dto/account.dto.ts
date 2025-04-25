@@ -15,12 +15,14 @@ export class AccountResponseDto {
 
   @ApiProperty({
     description: 'Saldo disponible',
-    example: 1000,
+    example: 1000.0,
+    type: 'number',
+    format: 'decimal',
   })
   balance: number;
 
   @ApiProperty({
-    description: 'ID de la cuenta que refirió esta cuenta',
+    description: 'ID de la cuenta que refirió esta cuenta (0 si no fue referida)',
     example: 0,
   })
   referred_by: number;
