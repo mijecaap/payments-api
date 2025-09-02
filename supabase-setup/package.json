@@ -1,0 +1,36 @@
+{
+  "name": "peru-elecciones-2026-supabase",
+  "version": "1.0.0",
+  "description": "Scripts y configuración para la base de datos de Supabase - Plataforma Electoral Perú 2026",
+  "scripts": {
+    "install-supabase": "npm install @supabase/supabase-js multer @types/multer",
+    "install-supabase-cli": "npm install -g supabase",
+    "create-env": "cp .env.example ../.env && echo 'Archivo .env creado. Configura tus credenciales de Supabase.'",
+    "validate-env": "node validate-env.js",
+    "setup-database": "node setup-database.js",
+    "seed-database": "node seed-database.js",
+    "test-connection": "node test-connection.js",
+    "generate-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/supabase.ts",
+    "backup-data": "node backup-data.js",
+    "migrate-from-payments": "node migrate-from-payments.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.11",
+    "dotenv": "^16.5.0"
+  },
+  "keywords": [
+    "supabase",
+    "peru",
+    "elecciones",
+    "2026",
+    "candidatos",
+    "postgresql",
+    "database"
+  ],
+  "author": "Peru Elections 2026 Team",
+  "license": "MIT"
+}
